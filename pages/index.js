@@ -4,12 +4,12 @@ import Transition from '../components/Transition'
 
 const Navbar = () => {
   const [isNavOpen, setIsNavOpen] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
       {/* Off-canvas menu for mobile */}
-      <Transition show={isSidebarOpen} appear={false}>
+      <Transition show={isSidebarOpen} appear={true}>
         <div className="md:hidden">
           <div className="fixed inset-0 flex z-40">
             <Transition

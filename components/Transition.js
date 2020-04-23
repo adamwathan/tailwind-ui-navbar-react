@@ -3,6 +3,7 @@ import { useRef, useEffect, useContext } from 'react'
 
 const TransitionContext = React.createContext({
   parent: {},
+  shouldTransition: true,
 })
 
 function Transition({
@@ -32,7 +33,7 @@ function Transition({
     classes.length && node.classList.remove(...classes)
   }
 
-  const { parent } = useContext(TransitionContext)
+  const { parent, shouldTransition } = useContext(TransitionContext)
   const mounted = useRef(false)
   useEffect(() => {
     mounted.current = true
@@ -40,9 +41,7 @@ function Transition({
 
   const isParent = show !== undefined
   const isChild = !isParent
-  const isDefaultOpen = show === true && mounted.current === false
-  // const isGroupMounted = isParent ? show : show === true && mounted.current
-  const isParentAndDefaultOpen = isParent && isDefaultOpen
+  const isInitialRender = mounted.current === false
 
   // TO DO: FIGURE OUT HOW TO MAKE PARENT WAIT FOR ALL NESTED TRANSITIONS TO FINISH, NOT JUST FIRST
   // ALTERNATIVELY LET THE USER SPECIFY THE TIMEOUT MANUALLY FOR LEAVE
@@ -51,22 +50,49 @@ function Transition({
            Mounted
   Child
 
+               INPUT                                                      OUTPUT
+  Parent Initial Render   |    Parent Show   |    Parent Appear    =>    Child Appear
+        true                        true              true                  true
+        true                        true             false                  false
+        true                        false            true                   true
+        true                        false            false                  true
+         false                      true              true                  true
+         false                      true             false                  true
+         false                      false            true                   true
+         false                      false            false                  true
+
+
   */
 
-  const realAppear = isChild ? !parent.defaultedToOpen || parent.appear : appear
+  // childs appear prop means whether the child should transition on enter (not just first enter, all enters)
+  // basically on children, appear === "are entrance transitions enabled"
+
+  // the only time child should have entrance transitions disabled is if the parent is initially rendering a showed state,
+  // and the user didn't configure it to transition on initial enter.
+
+  // parent.entranceTransitionsEnabled
+  let entranceTransitionsEnabled =
+    parent.isInitialRender && parent.show && !parent.appear ? false : true
+
+  let childTransitionsEnabled = isParent
+    ? isInitialRender && show && !appear
+      ? false
+      : true
+    : shouldTransition
 
   return (
     <TransitionContext.Provider
       value={{
+        shouldTransition: childTransitionsEnabled,
         parent: {
-          show: show,
-          defaultedToOpen: isParentAndDefaultOpen,
-          appear: realAppear,
+          show,
+          isInitialRender,
+          appear: isChild ? entranceTransitionsEnabled : appear,
         },
       }}
     >
       <CSSTransition
-        appear={realAppear}
+        appear={isChild ? entranceTransitionsEnabled : appear}
         unmountOnExit
         in={isChild ? parent.show : show}
         addEndListener={(node, done) => {
